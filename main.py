@@ -12,14 +12,11 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 #GUILD = os.getenv('DISCORD_GUILD')
 
 client = discord.Client()
-user_data = {}
-f = open("data.txt", "r")
-data = f.readlines()
-for line in data:
-    vals = line.split(" ")
-    user_data[vals[0]] = vals[1][:-1]
-
-f.close()
+# read in users
+with open("data.txt", "r") as f:
+    cols = f.readline().split()
+    User = namedtuple('User', cols)
+    users = [User(*row.split()) for row in f.readlines()]
 
 
 def read_polls():
@@ -77,12 +74,6 @@ def create_poll(poll_info):
 
 
 def create_scoreboard(content):
-    # read in users
-    with open("users.txt", "r") as f:
-        cols = f.readline().split()
-        User = namedtuple('User', cols)
-        users = [User(*row.split()) for row in f.readlines()]
-
     # constants to be used in API calls
     COLUMNS = ['kd', 'winRate', 'minutesPlayed']
     TIME_WINDOW = 'lifetime' if 'lifetime' in content else 'season'
@@ -132,6 +123,7 @@ async def on_member_join(member):
     await member.create_dm()
     await member.dm_channel.send(
         f'Hi {member.name}, welcome to my Discord Server!')
+    # note: this process will need to be updated now, because users is a list of namedtuples now
     # user_data[member.name] = member.userId#
     # Write the username to the data.txt so make sure its updated.
     # f.write(user_data[member.name] + " " + member.userId)
