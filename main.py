@@ -1,9 +1,9 @@
 # bot.py
-import os
 from datetime import datetime
 import discord
-import mysql.connector
 from dotenv import load_dotenv
+import mysql.connector
+import os
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -18,6 +18,7 @@ for line in data:
     user_data[vals[0]] = vals[1][:-1]
 
 f.close()
+
 
 def read_polls():
     polls = []
@@ -44,11 +45,13 @@ def get_remaining_time(end):
     start_time = datetime.now()
     time_split = end.split(" ")
     time_split_end = time_split[3].split(":")
-    end_time = datetime(int(time_split[2]), int(time_split[0]), int(time_split[1]), int(time_split_end[0]), int(time_split_end[1]), int(time_split_end[2]))
+    end_time = datetime(int(time_split[2]), int(time_split[0]), int(time_split[1]), int(
+        time_split_end[0]), int(time_split_end[1]), int(time_split_end[2]))
     remaining_time = end_time - start_time
     if remaining_time.days == 0:
         return "0 Days, " + str(remaining_time) + " Left"
     return str(remaining_time) + " Left"
+
 
 def print_polls(pollVals):
     output = "Name\tDescription\tRemaining\n"
@@ -69,7 +72,6 @@ def create_poll(poll_info):
         f.write(data + "\n")
     f.write(poll_info)
     f.close()
-
 
 
 @client.event
@@ -101,9 +103,6 @@ async def on_message(message):
         await message.channel.send(res)
     if "/createpoll" in message.content:
         create_poll(message.content)
-
-
-
 
 
 client.run(TOKEN)
