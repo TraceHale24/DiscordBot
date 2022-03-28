@@ -1,5 +1,7 @@
-Trace TraceHale#8503
-Trevor TrevSchmidt#8890
-Brennan userId3
-Tylan tylanmm#3501
-Isaac userId5
+name    discord             user                accountType
+Trace   TraceHale#8503      TraceTheLines       epic
+Trevor  TrevSchmidt#8890    holyschmidtty69     epic
+Brennan bclove2#8264        bclove2             xbl
+Tylan   tylanmm#3501        ty.my.guy           epic
+Isaac   Chinnoboy#5429      Chinnoboy64         epic
+Carter  ICEMAN#3078         SickHairball564     epic
