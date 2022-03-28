@@ -147,8 +147,7 @@ async def on_message(message):
     if message.content.startswith("/scoreboard"):
         m = await message.channel.send("Generating scoreboard...")
         res = create_scoreboard(message.content)
-        await m.delete()
-        await message.channel.send(res)
+        await m.edit(res)
 
 
 client.run(TOKEN)
