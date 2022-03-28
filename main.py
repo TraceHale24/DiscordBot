@@ -17,6 +17,7 @@ with open("data.txt", "r") as f:
     cols = f.readline().split()
     User = namedtuple('User', cols)
     users = [User(*row.split()) for row in f.readlines()]
+users.sort()
 
 
 def read_polls():
@@ -141,9 +142,9 @@ async def on_message(message):
     if "/polls" == message.content:
         res = print_polls(read_polls())
         await message.channel.send(res)
-    if "/createpoll" in message.content:
+    if message.content.startswith("/createpoll"):
         create_poll(message.content)
-    if "/scoreboard" in message.content:
+    if message.content.startswith("/scoreboard"):
         res = create_scoreboard(message.content)
         await message.channel.send(res)
 
