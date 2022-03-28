@@ -1,8 +1,10 @@
 # bot.py
+from collections import namedtuple
 from datetime import datetime
 import discord
 from dotenv import load_dotenv
 import mysql.connector
+import requests
 import os
 
 load_dotenv()
@@ -74,6 +76,52 @@ def create_poll(poll_info):
     f.close()
 
 
+def create_scoreboard(content):
+    # read in users
+    with open("users.txt", "r") as f:
+        cols = f.readline().split()
+        User = namedtuple('User', cols)
+        users = [User(*row.split()) for row in f.readlines()]
+
+    # constants to be used in API calls
+    COLUMNS = ['kd', 'winRate', 'minutesPlayed']
+    TIME_WINDOW = 'lifetime' if 'lifetime' in content else 'season'
+    for m in ['solo', 'duo', 'squad']:
+        if m in content:
+            MODE = m
+            break
+    else:
+        MODE = 'overall'
+
+    # generate scoreboard message
+    res = ['```',
+           '{} scoreboard ({})'.format(MODE, TIME_WINDOW),
+           '{:<7}{:>8}{:>9}{:>15}'.format('name', *COLUMNS)
+           ]
+    for user in users:
+        headers = {'Authorization': 'cd4ed170-0db8-4ecd-9744-2d60fd0a6648'}
+        params = {'name': user.user,
+                  'accountType': user.accountType,
+                  'timeWindow': TIME_WINDOW,
+                  'image': 'none'
+                  }
+
+        r = requests.get('https://fortnite-api.com/v2/stats/br/v2',
+                         params=params,
+                         headers=headers).json()
+        stats = r['data']['stats']['all'][MODE]
+
+        if stats:
+            res.append('{:<7}{:>8.3f}{:>9.3f}{:>15}'.format(
+                user.name, *[stats[col] for col in COLUMNS]))
+        else:
+            res.append('{:<7}{:>8}{:>9}{:>15}'.format(
+                user.name, *['NONE']*3))
+
+    res.append('```')
+    return '\n'.join(res)
+
+
 @client.event
 async def on_ready():
     print(f'{client.user.name} has connected to Discord!')
@@ -103,6 +151,9 @@ async def on_message(message):
         await message.channel.send(res)
     if "/createpoll" in message.content:
         create_poll(message.content)
+    if "/scoreboard" in message.content:
+        res = create_scoreboard(message.content)
+        await message.channel.send(res)
 
 
 client.run(TOKEN)
