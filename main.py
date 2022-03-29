@@ -41,7 +41,7 @@ def show_polls(message):
 
 
 async def add_poll(message):
-    split_name = message.content.split("\" \"")[:-1]
+    split_name = message.content.split("\" \"")
     if len(split_name) > 2 + len(OPTIONS):
         await message.channel.send("Sorry, I can only do up to {} options at once.".format(len(OPTIONS)))
     elif len(split_name) > 3:
