@@ -1,9 +1,8 @@
 # bot.py
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
 import discord
 from dotenv import load_dotenv
-import mysql.connector
 import requests
 import os
 import sqlite3
@@ -11,6 +10,8 @@ import sqlite3
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+OPTIONS = [('🟥', '\U0001F7E5'), ('🟦', '\U0001F7E6'), ('🟨', '\U0001F7E8'),
+           ('🟩', '\U0001F7E9'), ('🟧', '\U0001F7E7'), ('🟪', '\U0001F7EA')]
 
 client = discord.Client()
 # read in users
@@ -21,76 +22,56 @@ with open("data.txt", "r") as f:
 users.sort()
 
 
-def get_time_remaining(end_time, interval="default"):
-    now = datetime.now()
-    end_time_split = end_time.split(":")
-    year_hour = end_time_split[2].split(" ")
-    second, minutes, hours, days, months, years = end_time_split[4], end_time_split[
-        3], year_hour[1], end_time_split[1], end_time_split[0], year_hour[0]
-    end = datetime(int(years), int(months), int(days),
-                   int(hours), int(minutes), int(second))
-    duration = end - now
-    duration_in_s = duration.total_seconds()
-
-    # days
-    days = (duration_in_s // 86400)
-    duration_in_s %= 86400
-    hours = (duration_in_s // 3600)
-    duration_in_s %= 3600
-    minutes = duration_in_s // 60
-    duration_in_s %= 60
-    seconds = duration_in_s
-
-    return [days, hours, minutes, seconds]
-
-
 def show_polls(message):
     db = sqlite3.connect("polls.db")
     cursor = db.cursor()
-    query = """SELECT * FROM Polls"""
+    query = "SELECT * FROM Polls WHERE endTime > {}".format(
+        datetime.now().timestamp())
     poll_data = cursor.execute(query).fetchall()
-    res = ""
-    for i in range(len(poll_data)):
-        poll_data[i] = list(poll_data[i])
-        time_remaining = get_time_remaining(poll_data[i][3])
 
-        res += poll_data[i][0] + " \nEnds in: " + \
-            str(int(time_remaining[0])) + " Days " + \
-            str(int(time_remaining[1])) + " Hours " + \
-            str(int(time_remaining[2])) + " Minutes " + \
-            str(int(time_remaining[3])) + \
-            " Seconds \nLINK: " + poll_data[i][4] + "\n"
+    res = []
+    for i in range(len(poll_data)):
+        row = list(poll_data[i])
+        res.append("{}\nEnds {}\nLink: {}".format(
+            row[0], datetime.fromtimestamp(float(row[3])).ctime(), row[4]))
 
     cursor.close()
     db.close()
-    return res
+    return '\n\n'.join(res)
 
 
 async def add_poll(message):
-    split_name = message.content.split("\"")
-    if len(split_name) != 8:
-        name = split_name[1]
-        opOne = split_name[3]
-        opTwo = split_name[5]
-        endTime = split_name[7]
+    split_name = message.content.split("\" \"")[:-1]
+    if len(split_name) > 2 + len(OPTIONS):
+        await message.channel.send("Sorry, I can only do up to {} options at once.".format(len(OPTIONS)))
+    elif len(split_name) > 3:
+        # get poll arguments
+        name = split_name[0].strip("\"")[1]
+        *options, duration = split_name[1:]
+        D, H, M, S = map(int, duration.split(":"))
+        endTime = message.created_at + \
+            timedelta(days=D, hours=H, minutes=M, seconds=S).timestamp()
+
+        # send message, initialize options
+        voting = '\n'.join(['{}  {}'.format(OPTIONS[i][0], options[i])
+                           for i in range(len(options))])
+        result = await message.channel.send("@everyone Poll Created:\n{}".format(voting))
+        for _, code in OPTIONS[:len(options)]:
+            await result.add_reaction(code)
+
+        # store poll in database
         db = sqlite3.connect("polls.db")
         cursor = db.cursor()
-        result = await message.channel.send(f"@everyone Poll Created:\n {name}\n🟦 for {opOne} and 🟥 for {opTwo}")
-        await result.add_reaction("\U0001F7E6")
-        await result.add_reaction("\U0001F7E5")
-
         query = """INSERT INTO Polls 
-        (name, optionOne, optionTwo, endTime, messageID) 
-        VALUES
-        (?, ?, ?, ?, ?)"""
-        data_tuple = (name, opOne, opTwo, endTime, result.jump_url)
+        (name, options, endTime, messageID) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+        data_tuple = (name, ",".join(options), endTime, result.jump_url)
         cursor.execute(query, data_tuple)
         db.commit()
         cursor.close()
         db.close()
-
     else:
-        await message.channel.send("Usage \"Name of Poll\" \"OptionOne\" \"OptionTwo\" \"(End Time) MM:DD:YYYY HH:MM:SS\"")
+        await message.channel.send("Usage: `\"Name of Poll\" \"Option1\" \"Option2\" ... \"Option{}\" \"(Duration) DD:HH:MM:SS\"`".format(len(OPTIONS)))
 
 
 def create_scoreboard(content):
