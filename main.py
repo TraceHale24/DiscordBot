@@ -20,16 +20,19 @@ with open("data.txt", "r") as f:
     users = [User(*row.split()) for row in f.readlines()]
 users.sort()
 
-def get_time_remaining(end_time, interval = "default"):
+
+def get_time_remaining(end_time, interval="default"):
     now = datetime.now()
     end_time_split = end_time.split(":")
     year_hour = end_time_split[2].split(" ")
-    second, minutes, hours, days, months, years = end_time_split[4], end_time_split[3], year_hour[1], end_time_split[1], end_time_split[0], year_hour[0]
-    end = datetime(int(years), int(months), int(days), int(hours), int(minutes), int(second))
+    second, minutes, hours, days, months, years = end_time_split[4], end_time_split[
+        3], year_hour[1], end_time_split[1], end_time_split[0], year_hour[0]
+    end = datetime(int(years), int(months), int(days),
+                   int(hours), int(minutes), int(second))
     duration = end - now
     duration_in_s = duration.total_seconds()
 
-    #days
+    # days
     days = (duration_in_s // 86400)
     duration_in_s %= 86400
     hours = (duration_in_s // 3600)
@@ -39,6 +42,7 @@ def get_time_remaining(end_time, interval = "default"):
     seconds = duration_in_s
 
     return [days, hours, minutes, seconds]
+
 
 def show_polls(message):
     db = sqlite3.connect("polls.db")
@@ -51,10 +55,11 @@ def show_polls(message):
         time_remaining = get_time_remaining(poll_data[i][3])
 
         res += poll_data[i][0] + " \nEnds in: " + \
-               str(int(time_remaining[0])) + " Days " + \
-               str(int(time_remaining[1])) + " Hours " + \
-               str(int(time_remaining[2])) +" Minutes "+ \
-               str(int(time_remaining[3])) + " Seconds \nLINK: " + poll_data[i][4] + "\n"
+            str(int(time_remaining[0])) + " Days " + \
+            str(int(time_remaining[1])) + " Hours " + \
+            str(int(time_remaining[2])) + " Minutes " + \
+            str(int(time_remaining[3])) + \
+            " Seconds \nLINK: " + poll_data[i][4] + "\n"
 
     cursor.close()
     db.close()
@@ -86,8 +91,6 @@ async def add_poll(message):
 
     else:
         await message.channel.send("Usage \"Name of Poll\" \"OptionOne\" \"OptionTwo\" \"(End Time) MM:DD:YYYY HH:MM:SS\"")
-
-
 
 
 def create_scoreboard(content):
@@ -161,7 +164,6 @@ async def on_message(message):
         m = await message.channel.send("Generating scoreboard...")
         res = create_scoreboard(message.content)
         await m.edit(res)
-
 
 
 client.run(TOKEN)
