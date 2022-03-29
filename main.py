@@ -6,10 +6,11 @@ from dotenv import load_dotenv
 import mysql.connector
 import requests
 import os
+import sqlite3
+
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-#GUILD = os.getenv('DISCORD_GUILD')
 
 client = discord.Client()
 # read in users
@@ -19,59 +20,74 @@ with open("data.txt", "r") as f:
     users = [User(*row.split()) for row in f.readlines()]
 users.sort()
 
+def get_time_remaining(end_time, interval = "default"):
+    now = datetime.now()
+    end_time_split = end_time.split(":")
+    year_hour = end_time_split[2].split(" ")
+    second, minutes, hours, days, months, years = end_time_split[4], end_time_split[3], year_hour[1], end_time_split[1], end_time_split[0], year_hour[0]
+    end = datetime(int(years), int(months), int(days), int(hours), int(minutes), int(second))
+    duration = end - now
+    duration_in_s = duration.total_seconds()
 
-def read_polls():
-    polls = []
-    poll_file = open("polls.txt", "r")
-    poll_data = poll_file.readlines()
-    for j in range(len(poll_data)):
-        split_poll = poll_data[j].split("] [")
-        row = []
-        for i in range(len(split_poll)):
-            word = split_poll[i]
-            if j != len(poll_data) - 1 and i == 2:
-                word = word[:-1]
-            if i == 0:
-                word = word[1:]
-            elif ']' in word:
-                word = word[:-1]
-            row.append(word)
-        polls.append(row)
-    poll_file.close()
-    return polls
+    #days
+    days = (duration_in_s // 86400)
+    duration_in_s %= 86400
+    hours = (duration_in_s // 3600)
+    duration_in_s %= 3600
+    minutes = duration_in_s // 60
+    duration_in_s %= 60
+    seconds = duration_in_s
+
+    return [days, hours, minutes, seconds]
+
+def show_polls(message):
+    db = sqlite3.connect("polls.db")
+    cursor = db.cursor()
+    query = """SELECT * FROM Polls"""
+    poll_data = cursor.execute(query).fetchall()
+    res = ""
+    for i in range(len(poll_data)):
+        poll_data[i] = list(poll_data[i])
+        time_remaining = get_time_remaining(poll_data[i][3])
+
+        res += poll_data[i][0] + " \nEnds in: " + \
+               str(int(time_remaining[0])) + " Days " + \
+               str(int(time_remaining[1])) + " Hours " + \
+               str(int(time_remaining[2])) +" Minutes "+ \
+               str(int(time_remaining[3])) + " Seconds \nLINK: " + poll_data[i][4] + "\n"
+
+    cursor.close()
+    db.close()
+    return res
 
 
-def get_remaining_time(end):
-    start_time = datetime.now()
-    time_split = end.split(" ")
-    time_split_end = time_split[3].split(":")
-    end_time = datetime(int(time_split[2]), int(time_split[0]), int(time_split[1]), int(
-        time_split_end[0]), int(time_split_end[1]), int(time_split_end[2]))
-    remaining_time = end_time - start_time
-    if remaining_time.days == 0:
-        return "0 Days, " + str(remaining_time) + " Left"
-    return str(remaining_time) + " Left"
+async def add_poll(message):
+    split_name = message.content.split("\"")
+    if len(split_name) != 8:
+        name = split_name[1]
+        opOne = split_name[3]
+        opTwo = split_name[5]
+        endTime = split_name[7]
+        db = sqlite3.connect("polls.db")
+        cursor = db.cursor()
+        result = await message.channel.send(f"@everyone Poll Created:\n {name}\n🟦 for {opOne} and 🟥 for {opTwo}")
+        await result.add_reaction("\U0001F7E6")
+        await result.add_reaction("\U0001F7E5")
+
+        query = """INSERT INTO Polls 
+        (name, optionOne, optionTwo, endTime, messageID) 
+        VALUES
+        (?, ?, ?, ?, ?)"""
+        data_tuple = (name, opOne, opTwo, endTime, result.jump_url)
+        cursor.execute(query, data_tuple)
+        db.commit()
+        cursor.close()
+        db.close()
+
+    else:
+        await message.channel.send("Usage \"Name of Poll\" \"OptionOne\" \"OptionTwo\" \"(End Time) MM:DD:YYYY HH:MM:SS\"")
 
 
-def print_polls(pollVals):
-    output = "Name\tDescription\tRemaining\n"
-    for row in pollVals:
-        time_left = get_remaining_time(row[2])
-        output += row[0] + "\t" + row[1] + "\t" + str(time_left) + "\n"
-    return output
-
-
-def create_poll(poll_info):
-    f_read = open("polls.txt", "r")
-
-    polls = f_read.readlines()
-    f_read.close()
-    poll_info = poll_info[12:]
-    f = open("polls.txt", "w+")
-    for data in polls:
-        f.write(data + "\n")
-    f.write(poll_info)
-    f.close()
 
 
 def create_scoreboard(content):
@@ -135,19 +151,17 @@ async def on_message(message):
     print(message.author)
     if message.author == client.user:
         return
-    temp = "This is a test message for the Python Bot Version"
-    if message.content.lower() == "Test":
-        await message.channel.send(temp)
 
-    if "/polls" == message.content:
-        res = print_polls(read_polls())
+    if message.content == "/polls":
+        res = show_polls(message)
         await message.channel.send(res)
     if message.content.startswith("/createpoll"):
-        create_poll(message.content)
+        await add_poll(message)
     if message.content.startswith("/scoreboard"):
         m = await message.channel.send("Generating scoreboard...")
         res = create_scoreboard(message.content)
         await m.edit(res)
+
 
 
 client.run(TOKEN)
