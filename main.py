@@ -46,7 +46,7 @@ async def add_poll(message):
         await message.channel.send("Sorry, I can only do up to {} options at once.".format(len(OPTIONS)))
     elif len(split_name) > 3:
         # get poll arguments
-        name = split_name[0].strip("\"")[1]
+        name = split_name[0].split("\"")[1]
         *options, duration = split_name[1:]
         D, H, M, S = map(int, duration.split(":"))
         endTime = message.created_at + \
@@ -55,7 +55,7 @@ async def add_poll(message):
         # send message, initialize options
         voting = '\n'.join(['{}  {}'.format(OPTIONS[i][0], options[i])
                            for i in range(len(options))])
-        result = await message.channel.send("@everyone Poll Created:\n{}".format(voting))
+        result = await message.channel.send("@everyone Poll Created:\n{}\n{}".format(name, voting))
         for _, code in OPTIONS[:len(options)]:
             await result.add_reaction(code)
 
@@ -64,7 +64,7 @@ async def add_poll(message):
         cursor = db.cursor()
         query = """INSERT INTO Polls 
         (name, options, endTime, messageID) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"""
+        VALUES (?, ?, ?, ?)"""
         data_tuple = (name, ",".join(options), endTime, result.jump_url)
         cursor.execute(query, data_tuple)
         db.commit()
