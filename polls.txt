@@ -1,2 +1,0 @@
-[Test] [This is a test survey] [3 20 2022 13:55:00]
-[GiftCard] [Wendy's or GoldenCorral] [03 14 2022 17:00:00]
