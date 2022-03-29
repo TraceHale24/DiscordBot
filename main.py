@@ -41,21 +41,23 @@ def show_polls(message):
 
 
 async def add_poll(message):
-    split_name = message.content.split("\" \"")
-    if len(split_name) > 2 + len(OPTIONS):
-        await message.channel.send("Sorry, I can only do up to {} options at once.".format(len(OPTIONS)))
-    elif len(split_name) > 3:
-        # get poll arguments
-        name = split_name[0].split("\"")[1]
-        *options, duration = split_name[1:]
+    try:
+        # parse out parameters
+        name_raw, params_raw = message.content.split("? ")
+        name = name_raw.split("/createpoll ")
+        *options, duration = params_raw.split(";")
+        if not (1 < len(options) <= len(OPTIONS)):
+            raise Exception("too many poll options")
+
+        # split up duration
         D, H, M, S = map(int, duration.split(":"))
         endTime = message.created_at + \
             timedelta(days=D, hours=H, minutes=M, seconds=S).timestamp()
 
-        # send message, initialize options
+        # send message, initialize voting options
         voting = '\n'.join(['{}  {}'.format(OPTIONS[i][0], options[i])
                            for i in range(len(options))])
-        result = await message.channel.send("@everyone Poll Created:\n{}\n{}".format(name, voting))
+        result = await message.channel.send("Poll Created:\n{}\n{}".format(name, voting))
         for _, code in OPTIONS[:len(options)]:
             await result.add_reaction(code)
 
@@ -70,8 +72,9 @@ async def add_poll(message):
         db.commit()
         cursor.close()
         db.close()
-    else:
-        await message.channel.send("Usage: `\"Name of Poll\" \"Option1\" \"Option2\" ... \"Option{}\" \"(Duration) DD:HH:MM:SS\"`".format(len(OPTIONS)))
+
+    except:
+        await message.channel.send("Usage: `[Name of Poll]? [Option1]; [Option2]; ... [Option{}]; [DD]:[HH]:[MM]:[SS]`, where the given time is how long the poll should last".format(len(OPTIONS)))
 
 
 def create_scoreboard(content):
