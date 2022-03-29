@@ -11,5 +11,5 @@ The bot. There is a lot going on in this file, but some key things from this fil
 ### `data.txt`
 This contains the different users in the Discord server, along with the information necessary to complete Fortnite API calls (such as generating scoreboards).
 
-### `polls.txt`
-This is a log of the different polls that have been conducted on the server. It will be used a bit more in-depth eventually.
+### `polls.db`
+This is a SQLite database containing a table of the different polls that have been or are being conducted on the server.
