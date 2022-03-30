@@ -32,7 +32,7 @@ def show_polls(message):
     res = []
     for i in range(len(poll_data)):
         row = list(poll_data[i])
-        res.append("{}\nEnds {}\nLink: {}".format(
+        res.append("{}?\nEnds {}\nLink: {}".format(
             row[0], datetime.fromtimestamp(float(row[3])).ctime(), row[4]))
 
     cursor.close()
@@ -44,20 +44,20 @@ async def add_poll(message):
     try:
         # parse out parameters
         name_raw, params_raw = message.content.split("? ")
-        name = name_raw.split("/createpoll ")
-        *options, duration = params_raw.split(";")
+        name = name_raw.split("/createpoll ")[1]
+        *options, duration = params_raw.split("; ")
         if not (1 < len(options) <= len(OPTIONS)):
             raise Exception("too many poll options")
 
         # split up duration
         D, H, M, S = map(int, duration.split(":"))
-        endTime = message.created_at + \
-            timedelta(days=D, hours=H, minutes=M, seconds=S).timestamp()
+        endTime = (message.created_at + timedelta(days=D,
+                   hours=H, minutes=M, seconds=S)).timestamp()
 
         # send message, initialize voting options
         voting = '\n'.join(['{}  {}'.format(OPTIONS[i][0], options[i])
                            for i in range(len(options))])
-        result = await message.channel.send("Poll Created:\n{}\n{}".format(name, voting))
+        result = await message.channel.send("Poll Created:\n{}?\n{}".format(name, voting))
         for _, code in OPTIONS[:len(options)]:
             await result.add_reaction(code)
 
@@ -74,7 +74,8 @@ async def add_poll(message):
         db.close()
 
     except:
-        await message.channel.send("Usage: `[Name of Poll]? [Option1]; [Option2]; ... [Option{}]; [DD]:[HH]:[MM]:[SS]`, where the given time is how long the poll should last".format(len(OPTIONS)))
+        pass
+        # await message.channel.send("Usage: `[Name of Poll]? [Option1]; [Option2]; ... [Option{}]; [DD]:[HH]:[MM]:[SS]`, where the given time is how long the poll should last".format(len(OPTIONS)))
 
 
 def create_scoreboard(content):
