@@ -74,7 +74,8 @@ async def add_poll(message):
         db.close()
 
     except:
-        await message.channel.send("Usage: `[Name of Poll]? [Option1]; [Option2]; ... [Option{}]; [DD]:[HH]:[MM]:[SS]`, where the given time is how long the poll should last".format(len(OPTIONS)))
+        pass
+        # await message.channel.send("Usage: `[Name of Poll]? [Option1]; [Option2]; ... [Option{}]; [DD]:[HH]:[MM]:[SS]`, where the given time is how long the poll should last".format(len(OPTIONS)))
 
 
 def create_scoreboard(content):
