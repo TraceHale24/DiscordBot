@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import requests
 import os
 import sqlite3
+import random
 
 
 load_dotenv()
@@ -135,7 +136,7 @@ async def on_member_join(member):
 
 @client.event
 async def on_message(message):
-    print(message.author)
+    #print(message.author)
     if message.author == client.user:
         return
 
@@ -148,6 +149,10 @@ async def on_message(message):
         m = await message.channel.send("Generating scoreboard...")
         res = create_scoreboard(message.content)
         await m.edit(res)
+
+    ur_mom = random.randint(0,100)
+    if ur_mom == 69:
+        await message.reply("ur mom lol")
 
 
 client.run(TOKEN)
