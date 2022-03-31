@@ -23,6 +23,7 @@ with open("data.txt", "r") as f:
     users = [User(*row.split()) for row in f.readlines()]
 users.sort()
 
+
 def show_polls(message):
     db = sqlite3.connect("polls.db")
     cursor = db.cursor()
@@ -118,7 +119,7 @@ def create_scoreboard(content):
     return '\n'.join(res)
 
 
-def fortnite_blast(nickname, channel):
+def fortnite_blast(nickname):
     status = ["trying to get some dubs", "online",
               "in need of party members", "playing a few rounds"]
     call_to_arms = ["Ready up", "Squad up", "Hop on now" "Join them"]
@@ -146,7 +147,7 @@ async def on_member_update(before, after):
     if after.activity and before.activity != after.activity:
         if "fortnite" in after.activity.name.lower():
             channel = client.get_channel(945836161451061258)
-            await channel.send(fortnite_blast(after.nick, channel))
+            await channel.send(fortnite_blast(after.nick))
         elif "pycharm" in after.activity.name.lower():
             channel = client.get_channel(956305809736888421)
             await channel.send(f"{after.display_name} is working on my body ;)")
@@ -154,8 +155,6 @@ async def on_member_update(before, after):
         else:
             channel = client.get_channel(945782914019377154)
             await channel.send(f"{after.display_name} has started doing {after.activity.name}")
-
-
 
 
 @client.event
