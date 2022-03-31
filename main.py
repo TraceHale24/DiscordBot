@@ -14,7 +14,9 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 OPTIONS = [('🟥', '\U0001F7E5'), ('🟦', '\U0001F7E6'), ('🟨', '\U0001F7E8'),
            ('🟩', '\U0001F7E9'), ('🟧', '\U0001F7E7'), ('🟪', '\U0001F7EA')]
 
-client = discord.Client()
+intents = discord.Intents.all()
+client = discord.Client(intents=intents)
+
 # read in users
 with open("data.txt", "r") as f:
     cols = f.readline().split()
@@ -118,6 +120,13 @@ def create_scoreboard(content):
     return '\n'.join(res)
 
 
+def fortnite_blast(nickname, channel):
+    status = ["trying to get some dubs", "online",
+              "in need of party members", "playing a few rounds"]
+    call_to_arms = ["Ready up", "Squad up", "Hop on now" "Join them"]
+    return "{} is {}. {}!".format(nickname, random.choice(status), random.choice(call_to_arms))
+
+
 @client.event
 async def on_ready():
     print(f'{client.user.name} has connected to Discord!')
@@ -132,6 +141,14 @@ async def on_member_join(member):
     # user_data[member.name] = member.userId#
     # Write the username to the data.txt so make sure its updated.
     # f.write(user_data[member.name] + " " + member.userId)
+
+
+@client.event
+async def on_member_update(before, after):
+    if after.activity and before.activity != after.activity and "fortnite" in after.activity.name.lower():
+        for channel in after.guild.text_channels:
+            if channel.name == "fortnite":
+                await channel.send(fortnite_blast(after.nick, channel))
 
 
 @client.event
