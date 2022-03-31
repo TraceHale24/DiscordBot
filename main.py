@@ -8,7 +8,6 @@ import os
 import sqlite3
 import random
 
-
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 OPTIONS = [('🟥', '\U0001F7E5'), ('🟦', '\U0001F7E6'), ('🟨', '\U0001F7E8'),
@@ -23,7 +22,6 @@ with open("data.txt", "r") as f:
     User = namedtuple('User', cols)
     users = [User(*row.split()) for row in f.readlines()]
 users.sort()
-
 
 def show_polls(message):
     db = sqlite3.connect("polls.db")
@@ -145,10 +143,15 @@ async def on_member_join(member):
 
 @client.event
 async def on_member_update(before, after):
-    if after.activity and before.activity != after.activity and "fortnite" in after.activity.name.lower():
-        for channel in after.guild.text_channels:
-            if channel.name == "fortnite":
-                await channel.send(fortnite_blast(after.nick, channel))
+    if after.activity and before.activity != after.activity:
+        if "fortnite" in after.activity.name.lower():
+            channel = client.get_channel(945836161451061258)
+            await channel.send(fortnite_blast(after.nick, channel))
+        if "pycharm" in after.activity.name.lower():
+            channel = client.get_channel(945846689237958667)
+            await channel.send(f"{after.display_name} is working on my body ;)")
+
+
 
 
 @client.event
