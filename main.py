@@ -136,7 +136,7 @@ async def on_member_join(member):
 
 @client.event
 async def on_message(message):
-    #print(message.author)
+    # print(message.author)
     if message.author == client.user:
         return
 
@@ -150,8 +150,8 @@ async def on_message(message):
         res = create_scoreboard(message.content)
         await m.edit(res)
 
-    ur_mom = random.randint(0,100)
-    if ur_mom == 69:
+    ur_mom = random.randint(0, 100)
+    if ur_mom == 69 or ("who" in message.content and not random.randint(0, 4)):
         await message.reply("ur mom lol")
 
 
