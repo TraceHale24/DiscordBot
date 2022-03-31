@@ -147,8 +147,8 @@ async def on_member_update(before, after):
         if "fortnite" in after.activity.name.lower():
             channel = client.get_channel(945836161451061258)
             await channel.send(fortnite_blast(after.nick, channel))
-        if "pycharm" in after.activity.name.lower():
-            channel = client.get_channel(945846689237958667)
+        elif "pycharm" in after.activity.name.lower():
+            channel = client.get_channel(956305809736888421)
             await channel.send(f"{after.display_name} is working on my body ;)")
 
         else:
@@ -177,6 +177,9 @@ async def on_message(message):
     ur_mom = random.randint(0, 100)
     if ur_mom == 69 or ("who" in message.content and not random.randint(0, 4)):
         await message.reply("ur mom lol")
+
+    if "faith" in message.content.lower():
+        await message.reply("Faith is Trace's Hottie")
 
 
 client.run(TOKEN)
