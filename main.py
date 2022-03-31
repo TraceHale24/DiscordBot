@@ -151,6 +151,10 @@ async def on_member_update(before, after):
             channel = client.get_channel(945846689237958667)
             await channel.send(f"{after.display_name} is working on my body ;)")
 
+        else:
+            channel = client.get_channel(945782914019377154)
+            await channel.send(f"{after.display_name} has started doing {after.activity.name}")
+
 
 
 
