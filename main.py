@@ -122,7 +122,7 @@ def create_scoreboard(content):
 def fortnite_blast(nickname):
     status = ["trying to get some dubs", "online",
               "in need of party members", "playing a few rounds"]
-    call_to_arms = ["Ready up", "Squad up", "Hop on now" "Join them"]
+    call_to_arms = ["Ready up", "Squad up", "Hop on now", "Join them"]
     return "{} is {}. {}!".format(nickname, random.choice(status), random.choice(call_to_arms))
 
 
@@ -144,7 +144,8 @@ async def on_member_join(member):
 
 @client.event
 async def on_member_update(before, after):
-    if after.activity and before.activity != after.activity:
+    print(after.display_name, before.activity, after.activity)
+    if after.activity and (before.activity != after.activity):
         if "fortnite" in after.activity.name.lower():
             channel = client.get_channel(945836161451061258)
             await channel.send(fortnite_blast(after.nick))
