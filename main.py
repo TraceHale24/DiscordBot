@@ -144,7 +144,7 @@ async def on_member_join(member):
 
 @client.event
 async def on_member_update(before, after):
-    print(after.display_name, before.activity, after.activity)
+    # print(after.display_name, before.activity, after.activity)
     if after.activity and (before.activity != after.activity):
         if "fortnite" in after.activity.name.lower():
             channel = client.get_channel(945836161451061258)
@@ -172,7 +172,7 @@ async def on_message(message):
     if message.content.startswith("/scoreboard"):
         m = await message.channel.send("Generating scoreboard...")
         res = create_scoreboard(message.content)
-        await m.edit(res)
+        await m.edit(content=res)
 
     ur_mom = random.randint(0, 100)
     if ur_mom == 69 or ("who" in message.content and not random.randint(0, 4)):
