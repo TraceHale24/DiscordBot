@@ -93,7 +93,7 @@ def create_scoreboard(content):
     # generate scoreboard message
     res = ['```',
            '{} scoreboard ({})'.format(MODE, TIME_WINDOW),
-           '{:<7}{:>8}{:>9}{:>15}'.format('name', *COLUMNS)
+           '{:<7}{:>7}{:>9}{:>10}'.format('name', *COLUMNS[:-1], 'playTime')
            ]
     for user in users:
         headers = {'Authorization': 'cd4ed170-0db8-4ecd-9744-2d60fd0a6648'}
@@ -109,10 +109,10 @@ def create_scoreboard(content):
         stats = r['data']['stats']['all'][MODE]
 
         if stats:
-            res.append('{:<7}{:>8.3f}{:>9.3f}{:>15}'.format(
+            res.append('{:<7}{:>7.3f}{:>9.3f}{:>10}'.format(
                 user.name, *[stats[col] for col in COLUMNS]))
         else:
-            res.append('{:<7}{:>8}{:>9}{:>15}'.format(
+            res.append('{:<7}{:>7}{:>9}{:>10}'.format(
                 user.name, *['NONE']*3))
 
     res.append('```')
