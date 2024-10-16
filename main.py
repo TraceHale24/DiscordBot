@@ -96,7 +96,7 @@ def create_scoreboard(content):
            '{:<7}{:>7}{:>9}{:>10}'.format('name', *COLUMNS[:-1], 'playTime')
            ]
     for user in users:
-        headers = {'Authorization': 'cd4ed170-0db8-4ecd-9744-2d60fd0a6648'}
+        headers = {'Authorization': os.getenv('API_KEY')}
         params = {'name': user.user,
                   'accountType': user.accountType,
                   'timeWindow': TIME_WINDOW,
@@ -106,6 +106,11 @@ def create_scoreboard(content):
         r = requests.get('https://fortnite-api.com/v2/stats/br/v2',
                          params=params,
                          headers=headers).json()
+
+        print(r)
+        if r['status'] != 200:
+            continue
+
         stats = r['data']['stats']['all'][MODE]
 
         if stats:
