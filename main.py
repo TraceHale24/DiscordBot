@@ -1,4 +1,3 @@
-# bot.py
 from collections import namedtuple
 from datetime import datetime, timedelta
 import discord
@@ -7,80 +6,56 @@ import requests
 import os
 import sqlite3
 import random
+import schedule
+import time
+import threading
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+print(TOKEN)
 OPTIONS = [('🟥', '\U0001F7E5'), ('🟦', '\U0001F7E6'), ('🟨', '\U0001F7E8'),
            ('🟩', '\U0001F7E9'), ('🟧', '\U0001F7E7'), ('🟪', '\U0001F7EA')]
 
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 
-# read in users
+# Read in users
 with open("data.txt", "r") as f:
     cols = f.readline().split()
     User = namedtuple('User', cols)
     users = [User(*row.split()) for row in f.readlines()]
 users.sort()
 
+def create_reminder(content):
+    reminder_content = content.split(" ")
+    if len(reminder_content) < 3:
+        return "Structure is /reminder 2024-11-3T17:30 Message Goes Here"
 
-def show_polls(message):
-    db = sqlite3.connect("polls.db")
-    cursor = db.cursor()
-    query = "SELECT * FROM Polls WHERE endTime > {}".format(
-        datetime.now().timestamp())
-    poll_data = cursor.execute(query).fetchall()
+    reminder_date_time = reminder_content[1].split("T")
+    reminder_message = " ".join(reminder_content[2:])
 
-    res = []
-    for i in range(len(poll_data)):
-        row = list(poll_data[i])
-        res.append("{}?\nEnds {}\nLink: {}".format(
-            row[0], datetime.fromtimestamp(float(row[3])).ctime(), row[4]))
+    reminder_date = reminder_date_time[0].split("-")
+    reminder_time = reminder_date_time[1].split(":")
 
-    cursor.close()
-    db.close()
-    return '\n\n'.join(res)
+    time_to_send = datetime(int(reminder_date[0]), int(reminder_date[1]), int(reminder_date[2]), int(reminder_time[0]), int(reminder_time[1]))
+    sent = False
+    tag_everyone = True
 
+    # Insert the data into the events table
+    conn = sqlite3.connect("DiscordBot.db")
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO events (timeToSend, sent, message, tagEveryone)
+        VALUES (?, ?, ?, ?)
+    ''', (time_to_send, sent, reminder_message, tag_everyone))
 
-async def add_poll(message):
-    try:
-        # parse out parameters
-        name_raw, params_raw = message.content.split("? ")
-        name = name_raw.split("/createpoll ")[1]
-        *options, duration = params_raw.split("; ")
-        if not (1 < len(options) <= len(OPTIONS)):
-            raise Exception("too many poll options")
+    # Commit the changes and close the connection
+    conn.commit()
+    conn.close()
 
-        # split up duration
-        D, H, M, S = map(int, duration.split(":"))
-        endTime = (message.created_at + timedelta(days=D,
-                   hours=H, minutes=M, seconds=S)).timestamp()
-
-        # send message, initialize voting options
-        voting = '\n'.join(['{}  {}'.format(OPTIONS[i][0], options[i])
-                           for i in range(len(options))])
-        result = await message.channel.send("Poll Created:\n{}?\n{}".format(name, voting))
-        for _, code in OPTIONS[:len(options)]:
-            await result.add_reaction(code)
-
-        # store poll in database
-        db = sqlite3.connect("polls.db")
-        cursor = db.cursor()
-        query = """INSERT INTO Polls 
-        (name, options, endTime, messageID) 
-        VALUES (?, ?, ?, ?)"""
-        data_tuple = (name, ",".join(options), endTime, result.jump_url)
-        cursor.execute(query, data_tuple)
-        db.commit()
-        cursor.close()
-        db.close()
-
-    except:
-        await message.channel.send("Usage: `[Name of Poll]? [Option1]; [Option2]; ... [Option{}]; [DD]:[HH]:[MM]:[SS]`, where the given time is how long the poll should last".format(len(OPTIONS)))
-
+    return "Reminder Created"
 
 def create_scoreboard(content):
-    # constants to be used in API calls
     COLUMNS = ['kd', 'winRate', 'minutesPlayed']
     TIME_WINDOW = 'lifetime' if 'lifetime' in content else 'season'
     for m in ['solo', 'duo', 'squad']:
@@ -123,33 +98,53 @@ def create_scoreboard(content):
     res.append('```')
     return '\n'.join(res)
 
+def check_events():
+    """Check for events whose timeToSend has passed and process them."""
+    now = datetime.now()
+    conn = sqlite3.connect("mydatabase.db")
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT message FROM events WHERE timeToSend <= ? AND sent = 0
+    ''', (now,))
+    
+    events_to_send = cursor.fetchall()
+    
+    for event in events_to_send:
+        message = event[0]
+        # Here you would add your logic to send the message (e.g., to a Discord channel)
+        print(f"Sending message: {message}")
+        
+        # Update the event to mark it as sent
+        cursor.execute('''
+            UPDATE events SET sent = 1 WHERE message = ?
+        ''', (message,))
+    
+    conn.commit()
+    conn.close()
 
-def fortnite_blast(nickname):
-    status = ["trying to get some dubs", "online",
-              "in need of party members", "playing a few rounds"]
-    call_to_arms = ["Ready up", "Squad up", "Hop on now", "Join them"]
-    return "{} is {}. {}!".format(nickname, random.choice(status), random.choice(call_to_arms))
-
+def run_scheduler():
+    """Runs the scheduler to check events every 30 minutes."""
+    schedule.every(30).minutes.do(check_events)
+    
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 @client.event
 async def on_ready():
     print(f'{client.user.name} has connected to Discord!')
 
+# Start the scheduler in a separate thread
+threading.Thread(target=run_scheduler, daemon=True).start()
 
 @client.event
 async def on_member_join(member):
     await member.create_dm()
     await member.dm_channel.send(
         f'Hi {member.name}, welcome to my Discord Server!')
-    # note: this process will need to be updated now, because users is a list of namedtuples now
-    # user_data[member.name] = member.userId#
-    # Write the username to the data.txt so make sure its updated.
-    # f.write(user_data[member.name] + " " + member.userId)
-
 
 @client.event
 async def on_member_update(before, after):
-    # print(after.display_name, before.activity, after.activity)
     if after.activity and (before.activity != after.activity):
         if "fortnite" in after.activity.name.lower():
             channel = client.get_channel(945836161451061258)
@@ -162,22 +157,19 @@ async def on_member_update(before, after):
             channel = client.get_channel(945782914019377154)
             await channel.send(f"{after.display_name} has started doing {after.activity.name}")
 
-
 @client.event
 async def on_message(message):
-    # print(message.author)
     if message.author == client.user:
         return
 
-    if message.content == "/polls":
-        res = show_polls(message)
-        await message.channel.send(res)
-    if message.content.startswith("/createpoll"):
-        await add_poll(message)
     if message.content.startswith("/scoreboard"):
         m = await message.channel.send("Generating scoreboard...")
         res = create_scoreboard(message.content)
         await m.edit(content=res)
+
+    if message.content.startswith("/reminder"):
+        result = create_reminder(message.content)
+        await message.reply(result)
 
     ur_mom = random.randint(0, 100)
     if ur_mom == 69 or ("who" in message.content and not random.randint(0, 4)):
@@ -185,6 +177,5 @@ async def on_message(message):
 
     if "faith" in message.content.lower():
         await message.reply("Faith is Trace's Hottie")
-
 
 client.run(TOKEN)
