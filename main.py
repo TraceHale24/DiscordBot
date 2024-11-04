@@ -1,6 +1,7 @@
 from collections import namedtuple
 from datetime import datetime, timedelta
 import discord
+from discord.ext import tasks
 from dotenv import load_dotenv
 import requests
 import os
@@ -12,9 +13,6 @@ import threading
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-print(TOKEN)
-OPTIONS = [('🟥', '\U0001F7E5'), ('🟦', '\U0001F7E6'), ('🟨', '\U0001F7E8'),
-           ('🟩', '\U0001F7E9'), ('🟧', '\U0001F7E7'), ('🟪', '\U0001F7EA')]
 
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
@@ -26,7 +24,7 @@ with open("data.txt", "r") as f:
     users = [User(*row.split()) for row in f.readlines()]
 users.sort()
 
-def create_reminder(content):
+def create_reminder(content, channel_id):
     reminder_content = content.split(" ")
     if len(reminder_content) < 3:
         return "Structure is /reminder 2024-11-3T17:30 Message Goes Here"
@@ -98,21 +96,22 @@ def create_scoreboard(content):
     res.append('```')
     return '\n'.join(res)
 
-def check_events():
+async def check_events():
     """Check for events whose timeToSend has passed and process them."""
     now = datetime.now()
-    conn = sqlite3.connect("mydatabase.db")
+    conn = sqlite3.connect("DiscordBot.db")
     cursor = conn.cursor()
     cursor.execute('''
         SELECT message FROM events WHERE timeToSend <= ? AND sent = 0
     ''', (now,))
     
     events_to_send = cursor.fetchall()
-    
+    channel = client.get_channel(960725761973690398)
     for event in events_to_send:
         message = event[0]
         # Here you would add your logic to send the message (e.g., to a Discord channel)
-        print(f"Sending message: {message}")
+
+        await channel.send(f"@everyone {message}")
         
         # Update the event to mark it as sent
         cursor.execute('''
@@ -122,40 +121,12 @@ def check_events():
     conn.commit()
     conn.close()
 
-def run_scheduler():
-    """Runs the scheduler to check events every 30 minutes."""
-    schedule.every(30).minutes.do(check_events)
-    
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
-
-@client.event
-async def on_ready():
-    print(f'{client.user.name} has connected to Discord!')
-
-# Start the scheduler in a separate thread
-threading.Thread(target=run_scheduler, daemon=True).start()
 
 @client.event
 async def on_member_join(member):
     await member.create_dm()
     await member.dm_channel.send(
         f'Hi {member.name}, welcome to my Discord Server!')
-
-@client.event
-async def on_member_update(before, after):
-    if after.activity and (before.activity != after.activity):
-        if "fortnite" in after.activity.name.lower():
-            channel = client.get_channel(945836161451061258)
-            await channel.send(fortnite_blast(after.nick))
-        elif "pycharm" in after.activity.name.lower():
-            channel = client.get_channel(956305809736888421)
-            await channel.send(f"{after.display_name} is working on my body ;)")
-
-        else:
-            channel = client.get_channel(945782914019377154)
-            await channel.send(f"{after.display_name} has started doing {after.activity.name}")
 
 @client.event
 async def on_message(message):
@@ -168,14 +139,17 @@ async def on_message(message):
         await m.edit(content=res)
 
     if message.content.startswith("/reminder"):
-        result = create_reminder(message.content)
+        result = create_reminder(message.content, message.channel)
         await message.reply(result)
 
-    ur_mom = random.randint(0, 100)
-    if ur_mom == 69 or ("who" in message.content and not random.randint(0, 4)):
-        await message.reply("ur mom lol")
 
-    if "faith" in message.content.lower():
-        await message.reply("Faith is Trace's Hottie")
+@tasks.loop(minutes=5)
+async def scheduled_event_check():
+    await check_events()
+
+@client.event
+async def on_ready():
+    print(f'{client.user.name} has connected to Discord!')
+    scheduled_event_check.start() 
 
 client.run(TOKEN)
